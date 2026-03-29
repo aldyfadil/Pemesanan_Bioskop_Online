@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-// 1. Ambil URL dari bagian "Data API" atau "Project Settings"
-const supabaseUrl = 'https://znhgfvrktshtjurzxwqw.supabase.co'
+// Pakai import.meta.env biar aman di Vercel!
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// 2. Tempelkan Publishable Key yang kamu temukan tadi
-const supabaseAnonKey = 'sb_publishable_mnC6eZ3Q3tog_WpwPiFjsw_1yUoGASo'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseKey)
