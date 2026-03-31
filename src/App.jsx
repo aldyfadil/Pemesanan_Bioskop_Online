@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MovieCard from './components/MovieCard';
 import AdminPanel from './pages/AdminPanel';
+// 1. IMPORT BOOKING MODAL DI SINI
+import BookingModal from './components/BookingModal';
 import { Film, User, Loader2, LayoutGrid, Flame, Search, Filter } from 'lucide-react';
 
 function App() {
@@ -10,9 +12,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
 
-  // STATE UNTUK SEARCH & FILTER
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
+
+  // 2. STATE UNTUK MUNCULIN POP-UP BOOKING DITARUH DI SINI
+  const [selectedMovieForBooking, setSelectedMovieForBooking] = useState(null);
 
   const genres = ['All', 'Action', 'Sci-Fi', 'Horror', 'Animation', 'Drama'];
 
@@ -37,7 +41,6 @@ function App() {
     setLoading(false);
   };
 
-  // LOGIKA FILTERING (SEARCH + GENRE)
   const filteredMovies = movies.filter(movie => {
     const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGenre = selectedGenre === 'All' || movie.genre === selectedGenre;
@@ -67,7 +70,7 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-8 pt-32 pb-20 text-xs">
+      <main className="max-w-7xl mx-auto px-8 pt-32 pb-20 text-xs relative">
         {loading ? (
           <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
             <Loader2 className="animate-spin text-red-600" size={40} />
@@ -77,7 +80,6 @@ function App() {
           <>
             {activePage === 'home' && (
               <div className="space-y-20 animate-in fade-in duration-1000">
-                {/* HERO SECTION */}
                 <section className="relative h-[400px] rounded-[3rem] overflow-hidden flex items-center p-12 bg-gradient-to-r from-red-900/20 to-transparent border border-white/5">
                   <div className="max-w-lg space-y-6 z-10">
                     <span className="bg-red-600 px-3 py-1 rounded-full font-black tracking-widest text-[8px]">PREMIUM STREAMING</span>
@@ -85,16 +87,17 @@ function App() {
                     <p className="text-slate-400 font-medium leading-relaxed">Watch the latest trending movies from around the world directly from your dashboard.</p>
                     <button onClick={() => setActivePage('movies')} className="bg-white text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">Explore Movies</button>
                   </div>
-                  <div className="absolute right-0 top-0 w-1/2 h-full opacity-20 pointer-events-none bg-[url('https://www.themoviedb.org/t/p/original/mBaXZ95O2OxY0SgsS66p2I99oqz.jpg')] bg-cover"></div>
                 </section>
 
-                {/* TRENDING SECTION */}
                 <section>
                   <h2 className="text-3xl font-black tracking-tighter uppercase italic flex items-center gap-4 mb-10">
                     <Flame className="text-red-600" fill="currentColor" /> TRENDING NOW
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    {movies.filter(m => m.is_trending).slice(0, 4).map(m => <MovieCard key={m.id} movie={m} />)}
+                    {/* 3. UBAH MOVIECARD TRENDING DI SINI */}
+                    {movies.filter(m => m.is_trending).slice(0, 4).map(m => (
+                      <MovieCard key={m.id} movie={m} onBook={(selectedMovie) => setSelectedMovieForBooking(selectedMovie)} />
+                    ))}
                   </div>
                 </section>
               </div>
@@ -107,47 +110,30 @@ function App() {
                     <h2 className="text-5xl font-black italic tracking-tighter flex items-center gap-5">
                       <LayoutGrid className="text-red-600" size={40} /> ALL MOVIES
                     </h2>
-                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest ml-14">Showing {filteredMovies.length} Results</p>
                   </div>
-
-                  {/* SEARCH & FILTER CONTROLS */}
                   <div className="flex flex-col sm:flex-row gap-4">
-                    {/* Search Bar */}
                     <div className="relative group">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-red-600 transition-colors" size={18} />
-                      <input
-                        type="text"
-                        placeholder="Search title..."
-                        className="bg-slate-900 border border-white/10 py-4 pl-12 pr-6 rounded-2xl outline-none focus:ring-2 ring-red-600/20 w-full sm:w-64"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                      <input type="text" placeholder="Search title..." className="bg-slate-900 border border-white/10 py-4 pl-12 pr-6 rounded-2xl outline-none focus:ring-2 ring-red-600/20" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
-
-                    {/* Genre Filter */}
                     <div className="relative group">
                       <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                      <select
-                        className="bg-slate-900 border border-white/10 py-4 pl-12 pr-10 rounded-2xl outline-none appearance-none cursor-pointer focus:ring-2 ring-red-600/20 font-bold uppercase tracking-widest"
-                        value={selectedGenre}
-                        onChange={(e) => setSelectedGenre(e.target.value)}
-                      >
+                      <select className="bg-slate-900 border border-white/10 py-4 pl-12 pr-10 rounded-2xl outline-none" value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
                         {genres.map(g => <option key={g} value={g}>{g}</option>)}
                       </select>
                     </div>
                   </div>
                 </div>
 
-                {/* MOVIE GRID */}
                 {filteredMovies.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                    {filteredMovies.map(m => <MovieCard key={m.id} movie={m} />)}
+                    {/* 3. UBAH MOVIECARD EXPLORE DI SINI */}
+                    {filteredMovies.map(m => (
+                      <MovieCard key={m.id} movie={m} onBook={(selectedMovie) => setSelectedMovieForBooking(selectedMovie)} />
+                    ))}
                   </div>
                 ) : (
-                  <div className="h-[40vh] border-2 border-dashed border-white/5 rounded-[3rem] flex flex-col items-center justify-center text-slate-600">
-                    <Search size={50} className="mb-4 opacity-20" />
-                    <p className="font-black uppercase tracking-widest">No Movies Found</p>
-                  </div>
+                  <div className="h-[40vh] border-2 border-dashed border-white/5 flex items-center justify-center">No Movies Found</div>
                 )}
               </div>
             )}
@@ -156,6 +142,14 @@ function App() {
               <AdminPanel movies={movies} onRefresh={fetchMovies} session={session} />
             )}
           </>
+        )}
+
+        {/* 4. KOMPONEN BOOKING MODAL DITARUH PALING BAWAH DI DALAM MAIN */}
+        {selectedMovieForBooking && (
+          <BookingModal
+            movie={selectedMovieForBooking}
+            onClose={() => setSelectedMovieForBooking(null)}
+          />
         )}
       </main>
     </div>
