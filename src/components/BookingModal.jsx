@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { X, Armchair } from 'lucide-react';
+import { X, Armchair, ShoppingBag } from 'lucide-react';
 
 const SEAT_ROWS = ['A', 'B', 'C', 'D'];
 const SEATS_PER_ROW = 8;
@@ -15,117 +15,82 @@ const BookingModal = ({ movie, onClose }) => {
     }, [movie.id]);
 
     const fetchBookedSeats = async () => {
-        const { data, error } = await supabase
-            .from('bookings')
-            .select('seat_number')
-            .eq('movie_id', movie.id);
-
-        if (data) {
-            setBookedSeats(data.map(b => b.seat_number));
-        }
+        const { data } = await supabase.from('bookings').select('seat_number').eq('movie_id', movie.id);
+        if (data) setBookedSeats(data.map(b => b.seat_number));
         setLoading(false);
     };
 
     const toggleSeat = (seatId) => {
         if (bookedSeats.includes(seatId)) return;
-
-        if (selectedSeats.includes(seatId)) {
-            setSelectedSeats(selectedSeats.filter(s => s !== seatId));
-        } else {
-            setSelectedSeats([...selectedSeats, seatId]);
-        }
+        setSelectedSeats(prev => prev.includes(seatId) ? prev.filter(s => s !== seatId) : [...prev, seatId]);
     };
 
     const handleBook = async () => {
-        if (selectedSeats.length === 0) return alert("Pilih kursi dulu!");
-
-        // Format data untuk disimpan ke Supabase
-        const insertData = selectedSeats.map(seat => ({
-            movie_id: movie.id,
-            seat_number: seat
-        }));
-
-        const { error } = await supabase.from('bookings').insert(insertData);
-
-        if (error) {
-            alert("Gagal booking: " + error.message);
-        } else {
-            alert(`Berhasil memesan kursi: ${selectedSeats.join(', ')}`);
-            onClose(); // Tutup modal setelah sukses
+        if (selectedSeats.length === 0) return;
+        const { error } = await supabase.from('bookings').insert(selectedSeats.map(s => ({ movie_id: movie.id, seat_number: s })));
+        if (error) alert(error.message);
+        else {
+            alert(`Sukses Booking: ${selectedSeats.join(', ')}`);
+            onClose();
         }
     };
 
-    if (loading) return <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center text-white font-black tracking-widest uppercase">Memuat Denah Kursi...</div>;
+    if (loading) return <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center font-black">LOADING...</div>;
 
     return (
-        <div className="fixed inset-0 z-[60] bg-[#020617]/95 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-3xl rounded-[3rem] p-10 animate-in zoom-in duration-300 shadow-2xl">
-                <div className="flex justify-between items-start mb-10">
-                    <div>
-                        <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white">{movie.title}</h2>
-                        <p className="text-red-500 font-black tracking-[0.3em] text-[10px] mt-2">PILIH KURSI ANDA</p>
+        <div className="fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-slate-900 w-full max-w-2xl sm:rounded-[3rem] rounded-t-[2.5rem] p-6 sm:p-10 border-t sm:border border-white/10 animate-in slide-in-from-bottom-10 duration-300 max-h-[90vh] overflow-y-auto">
+
+                {/* Header Responsive */}
+                <div className="flex justify-between items-start mb-8">
+                    <div className="pr-8">
+                        <h2 className="text-2xl sm:text-3xl font-black italic uppercase leading-none">{movie.title}</h2>
+                        <p className="text-red-500 font-black text-[9px] tracking-widest mt-2 uppercase">Select Your Seat</p>
                     </div>
-                    <button onClick={onClose} className="bg-white/5 p-3 rounded-full hover:bg-red-600 hover:text-white transition-all text-slate-400">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-red-600 transition-colors"><X size={20} /></button>
+                </div>
+
+                {/* Screen Area */}
+                <div className="w-full h-8 bg-gradient-to-b from-white/20 to-transparent rounded-t-full mb-12 shadow-[0_-10px_20px_rgba(255,255,255,0.1)] flex justify-center items-end">
+                    <span className="text-[8px] font-black tracking-[1em] text-slate-500 mb-2">CINEMA SCREEN</span>
+                </div>
+
+                {/* Seats Grid - Responsive Scroll */}
+                <div className="overflow-x-auto pb-6 scrollbar-hide">
+                    <div className="min-w-[450px] space-y-3">
+                        {SEAT_ROWS.map(row => (
+                            <div key={row} className="flex justify-center gap-3">
+                                <div className="w-5 text-center font-black text-slate-700 text-[10px] self-center">{row}</div>
+                                {[...Array(SEATS_PER_ROW)].map((_, i) => {
+                                    const seatId = `${row}${i + 1}`;
+                                    const isBooked = bookedSeats.includes(seatId);
+                                    const isSelected = selectedSeats.includes(seatId);
+                                    return (
+                                        <button key={seatId} disabled={isBooked} onClick={() => toggleSeat(seatId)}
+                                            className={`w-10 h-10 rounded-t-xl rounded-b-md flex flex-col items-center justify-center transition-all ${isBooked ? 'bg-slate-950 text-slate-800' : isSelected ? 'bg-red-600 text-white -translate-y-1' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'
+                                                }`}>
+                                            <Armchair size={16} />
+                                            <span className="text-[7px] font-bold mt-1">{seatId}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Checkout Info */}
+                <div className="mt-8 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="flex gap-4 text-[8px] font-black text-slate-500">
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-800 rounded-sm"></div> AVAILABLE</div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-600 rounded-sm"></div> SELECTED</div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-950 rounded-sm"></div> BOOKED</div>
+                    </div>
+
+                    <button onClick={handleBook} disabled={selectedSeats.length === 0}
+                        className="w-full sm:w-auto ml-auto bg-red-600 px-8 py-4 rounded-2xl font-black text-xs tracking-widest flex items-center justify-center gap-3 disabled:opacity-30">
+                        <ShoppingBag size={18} /> BOOK ({selectedSeats.length})
                     </button>
-                </div>
-
-                {/* LAYAR BIOSKOP */}
-                <div className="w-full h-12 bg-gradient-to-t from-white/10 to-transparent border-t-4 border-white/20 rounded-t-[50%] mb-12 relative shadow-[0_-10px_30px_rgba(255,255,255,0.05)]">
-                    <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black tracking-[0.5em] text-slate-500">LAYAR UTAMA</span>
-                </div>
-
-                {/* BARISAN KURSI */}
-                <div className="space-y-4 mb-10">
-                    {SEAT_ROWS.map(row => (
-                        <div key={row} className="flex justify-center gap-3 sm:gap-6">
-                            <div className="w-6 flex items-center justify-center font-black text-slate-600">{row}</div>
-                            {[...Array(SEATS_PER_ROW)].map((_, i) => {
-                                const seatId = `${row}${i + 1}`;
-                                const isBooked = bookedSeats.includes(seatId);
-                                const isSelected = selectedSeats.includes(seatId);
-
-                                return (
-                                    <button
-                                        key={seatId}
-                                        disabled={isBooked}
-                                        onClick={() => toggleSeat(seatId)}
-                                        className={`p-3 rounded-t-2xl rounded-b-lg transition-all ${isBooked ? 'bg-[#020617] text-slate-800 border border-white/5 cursor-not-allowed opacity-50' :
-                                                isSelected ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] -translate-y-2' :
-                                                    'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:-translate-y-1'
-                                            }`}
-                                    >
-                                        <Armchair size={24} />
-                                        <span className="text-[9px] font-black block mt-2 tracking-widest">{seatId}</span>
-                                    </button>
-                                );
-                            })}
-                            <div className="w-6 flex items-center justify-center font-black text-slate-600">{row}</div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* KETERANGAN & TOMBOL BAYAR */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-6 border-t border-white/5 pt-8">
-                    <div className="flex gap-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        <div className="flex items-center gap-2"><div className="w-5 h-5 bg-slate-800 rounded-md"></div> KOSONG</div>
-                        <div className="flex items-center gap-2"><div className="w-5 h-5 bg-red-600 rounded-md"></div> DIPILIH</div>
-                        <div className="flex items-center gap-2"><div className="w-5 h-5 bg-[#020617] border border-white/5 rounded-md"></div> TERISI</div>
-                    </div>
-
-                    <div className="flex items-center gap-8">
-                        <div className="text-right hidden sm:block">
-                            <p className="text-[10px] font-bold text-slate-500 tracking-[0.2em]">TOTAL TIKET</p>
-                            <p className="text-2xl font-black text-white">{selectedSeats.length} <span className="text-sm text-red-500">SEAT</span></p>
-                        </div>
-                        <button
-                            onClick={handleBook}
-                            disabled={selectedSeats.length === 0}
-                            className="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest disabled:opacity-20 hover:bg-red-600 hover:text-white transition-all shadow-xl"
-                        >
-                            BAYAR SEKARANG
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
